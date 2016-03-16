@@ -1,0 +1,6 @@
+name = "InstantLoader"
+# badges = ["travis"]
+authority="cpan:KARUPA"
+
+module_maker="ModuleBuildTiny"
+
