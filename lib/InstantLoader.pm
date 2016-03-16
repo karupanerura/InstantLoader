@@ -36,14 +36,15 @@ sub _new {
 sub _filter_not_installed {
     my @not_installed_modules;
     for my $module (@_) {
-        my $path = File::Spec->catfile(split /(?:\'|::)/, $module . '.pm');
+        my @parts = split /(?:\'|::)/, $module . '.pm';
+        my $path = join '/', @parts;
         next if exists $INC{$path}; ## loaded
 
         my $found;
         for my $dir (@INC) {
             next unless -d $dir;
 
-            my $fullpath = File::Spec->catfile($dir, $path);
+            my $fullpath = File::Spec->catfile($dir, @parts);
             if (-f $fullpath) {
                 $found = 1;
                 last;
