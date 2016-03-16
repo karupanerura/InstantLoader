@@ -8,6 +8,10 @@ our $VERSION = "0.01";
 use File::Spec;
 use File::Temp qw/tempdir/;
 use File::Path qw/remove_tree/;
+use App::cpanminus;
+use POSIX qw/WUNTRACED/;
+
+use constant VERBOSE => $ENV{VERBOSE_INSTANT_LOAD};
 
 my $TMPINC;
 BEGIN { $TMPINC = tempdir(CLEANUP => 1) }
@@ -19,19 +23,66 @@ sub import {
     my ($class, @packages) = @_;
     my $caller = caller;
 
-    my $pid = fork;
-    if ($pid == 0) {
-        open STDOUT, '>', File::Spec->devnull() or die $!;
-        exec 'cpanm', '-n', '-q', '--skip-satisfied', -L => $TMPINC, @packages;
+    my $self = $class->_new($caller);
+    $self->_install(@packages);
+    $self->_load(@packages);
+}
+
+sub _new {
+    my ($class, $target) = @_;
+    return bless { target => $target } => $class;
+}
+
+sub _filter_not_installed {
+    my @not_installed_modules;
+    for my $module (@_) {
+        my $path = File::Spec->catfile(split /(?:\'|::)/, $module . '.pm');
+        next if exists $INC{$path}; ## loaded
+
+        my $found;
+        for my $dir (@INC) {
+            next unless -d $dir;
+
+            my $fullpath = File::Spec->catfile($dir, $path);
+            if (-f $fullpath) {
+                $found = 1;
+                last;
+            }
+        }
+        push @not_installed_modules => $module unless $found;
     }
-    wait;
+    return @not_installed_modules;
+}
+
+sub _install {
+    my $self = shift;
+    my @packages = _filter_not_installed(@_);
+    return $self unless @packages;
+
+    my $pid = fork;
+    die $! unless defined $pid;
+    if ($pid == 0) {
+        local $ENV{PERL5LIB} = join ':', @INC;
+        warn "INSTALL: [@packages] to $TMPINC" if VERBOSE;
+        open STDOUT, '>', File::Spec->devnull() or die $!;
+        exec 'cpanm', '-n', '-q', -L => $TMPINC, @packages;
+    }
+    waitpid $pid, WUNTRACED;
+
+    return $self;
+}
+
+sub _load {
+    my ($self, @packages) = @_;
 
     my $code = join ';', map { "use $_" } @packages;
-    eval sprintf q{
+    my $success = eval sprintf q{
         package %s;
         %s;
         1;
-    }, $caller, $code;
+    }, $self->{target}, $code;
+    die $@ if $@;
+    return $success;
 }
 
 1;

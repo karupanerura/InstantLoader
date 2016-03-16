@@ -43,6 +43,8 @@
       "runtime" : {
          "requires" : {
             "App::cpanminus" : "0",
+            "File::Path" : "0",
+            "File::Temp" : "0",
             "perl" : "5.008001"
          }
       },
@@ -53,6 +55,17 @@
       }
    },
    "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/karupanerura/InstantLoader/issues"
+      },
+      "homepage" : "https://github.com/karupanerura/InstantLoader",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/karupanerura/InstantLoader.git",
+         "web" : "https://github.com/karupanerura/InstantLoader"
+      }
+   },
    "version" : "0.01",
    "x_authority" : "cpan:KARUPA",
    "x_serialization_backend" : "JSON::PP version 2.27300"
